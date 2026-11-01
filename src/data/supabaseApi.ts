@@ -88,8 +88,29 @@ async function questionOverrides(): Promise<Record<string, QuestionOverride>> {
   )
 }
 
+/** Llama a la Edge Function manage-users y traduce su error a un mensaje legible. */
+async function manageUsers(action: 'create' | 'reset-password', email: string, password: string) {
+  const { error } = await supabase.functions.invoke('manage-users', { body: { action, email, password } })
+  if (!error) return
+  let message = error.message
+  const ctx = (error as { context?: Response }).context
+  if (ctx && typeof ctx.json === 'function') {
+    try {
+      message = (await ctx.json()).error ?? message
+    } catch {
+      /* respuesta sin JSON */
+    }
+  }
+  if (/failed to send|fetch/i.test(message)) message = 'No se pudo contactar la función manage-users. ¿Está desplegada en Supabase?'
+  throw new Error(message)
+}
+
 export const supabaseBackend: Backend = {
   kind: 'supabase',
+  users: {
+    create: (email, password) => manageUsers('create', email, password),
+    resetPassword: (email, password) => manageUsers('reset-password', email, password),
+  },
   visits: {
     async list() {
       const rows = check(await supabase.from('visits').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }))

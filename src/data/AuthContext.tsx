@@ -10,6 +10,9 @@ interface Auth {
   /** Funcionario asociado al email de la sesión (null si no está habilitado). */
   me: Staff | null
   isAdmin: boolean
+  /** El usuario entró con una contraseña temporal y debe cambiarla. */
+  mustChangePassword: boolean
+  changePassword: (password: string) => Promise<string | null>
   signIn: (email: string, password: string) => Promise<string | null>
   signOut: () => Promise<void>
 }
@@ -50,12 +53,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!error) return null
     return /invalid/i.test(error.message) ? 'Email o contraseña incorrectos.' : error.message
   }
+  const changePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password, data: { must_change_password: false } })
+    if (!error) return null
+    if (/different|same/i.test(error.message)) return 'La nueva contraseña debe ser distinta de la actual.'
+    if (/weak|short|characters/i.test(error.message)) return 'Contraseña demasiado débil: usa al menos 8 caracteres.'
+    return error.message
+  }
   const signOut = async () => {
     await supabase.auth.signOut()
   }
 
   return (
-    <AuthContext.Provider value={{ loading, session, me, isAdmin: !!me?.isAdmin, signIn, signOut }}>
+    <AuthContext.Provider value={{
+      loading,
+      session,
+      me,
+      isAdmin: !!me?.isAdmin,
+      mustChangePassword: !!session?.user.user_metadata?.must_change_password,
+      changePassword,
+      signIn,
+      signOut,
+    }}>
       {children}
     </AuthContext.Provider>
   )

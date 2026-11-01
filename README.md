@@ -52,9 +52,14 @@ Dos modos, elegidos automáticamente por `src/data/api.ts`:
 3. **Authentication → Users → Add user → Create new user**: el mismo email y una contraseña (marca *Auto confirm*).
 4. **Authentication → Sign In / Providers**: desactiva *Allow new users to sign up*. Así solo entran las cuentas que tú creas.
 
+### Edge Function `manage-users` (una vez)
+Permite crear usuarios y restablecer contraseñas desde la app, sin entrar a Supabase.
+Supabase → **Edge Functions** → *Deploy a new function* → *Via Editor*, nombre `manage-users`, pega
+`supabase/functions/manage-users/index.ts` y despliega. La clave secreta la pone Supabase automáticamente.
+
 ### Dar acceso a otra persona
-1. App → Administración → Funcionarios: agrégala con su email.
-2. Supabase → Authentication → Users → Add user, con ese email.
+App → Administración → Funcionarios: agrégala con su email y una contraseña temporal (botón «Generar»).
+Al entrar por primera vez se le pide crear su propia contraseña. Si la olvida: «Restablecer contraseña».
 
 Para quitar el acceso, desactívala en Funcionarios.
 

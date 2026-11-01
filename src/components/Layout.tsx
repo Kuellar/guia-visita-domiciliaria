@@ -35,7 +35,7 @@ export function Layout() {
           </nav>
           {backend.kind === 'supabase' && me && (
             <div className="ml-auto flex items-center gap-3 text-sm text-slate-500">
-              <span className="hidden sm:inline">{me.name}</span>
+              <NavLink to="/cuenta" title="Cambiar contraseña" className="hover:text-brand-600">{me.name}</NavLink>
               <button type="button" className="hover:text-brand-600" onClick={signOut}>Salir</button>
             </div>
           )}

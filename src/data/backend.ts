@@ -30,6 +30,11 @@ export interface Backend {
     update(id: string, override: QuestionOverride): Promise<void>
     reset(id: string): Promise<void>
   }
+  /** Cuentas de acceso (solo Supabase, vía Edge Function manage-users). */
+  users?: {
+    create(email: string, password: string): Promise<void>
+    resetPassword(email: string, password: string): Promise<void>
+  }
   data: {
     exportJson(): Promise<string>
     /** Solo en modo local. */
