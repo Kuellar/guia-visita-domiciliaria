@@ -46,13 +46,17 @@ Deno.serve(async (req) => {
     if (callerError || !caller.user?.email) return reply(401, { error: 'Sesión no válida' })
 
     // 2. ¿Es administrador activo?
-    const { data: me } = await admin
+    const { data: me, error: staffError } = await admin
       .from('staff')
       .select('id')
       .ilike('email', caller.user.email)
       .eq('active', true)
       .eq('is_admin', true)
       .maybeSingle()
+    if (staffError) {
+      console.error(staffError)
+      return reply(500, { error: `No se pudo leer la tabla staff: ${staffError.message}` })
+    }
     if (!me) return reply(403, { error: 'Solo un administrador puede gestionar usuarios' })
 
     // 3. Validar datos

@@ -93,6 +93,10 @@ grant select, insert, update, delete on public.staff, public.visits,
   public.rule_overrides, public.question_overrides to authenticated;
 revoke all on public.staff, public.visits, public.rule_overrides, public.question_overrides from anon;
 
+-- La Edge Function manage-users (rol service_role) necesita leer staff para comprobar administradores.
+grant usage on schema public to service_role;
+grant select on public.staff to service_role;
+
 -- ---------- RLS: reglas por fila --------------------------------------
 
 alter table public.staff              enable row level security;
