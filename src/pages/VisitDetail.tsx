@@ -49,7 +49,7 @@ export function VisitDetail() {
           <div>
             <h1 className="text-xl font-semibold">{visit.patientName}</h1>
             <p className="text-sm text-slate-500">
-              {visit.patientRut || 'Sin RUT'} · {visit.date} · {member ? `${member.name} (${member.estamento})` : 'Sin funcionario'}
+              {visit.date} · {member ? `${member.name} (${member.estamento})` : 'Sin funcionario'}
             </p>
           </div>
           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${visit.status === 'completa' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>

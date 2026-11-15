@@ -65,6 +65,9 @@ const staffApi = {
   async list(): Promise<Staff[]> {
     return [...load().staff].sort((a, b) => a.name.localeCompare(b.name))
   },
+  async directory(): Promise<Staff[]> {
+    return (await staffApi.list()).filter((s) => s.active)
+  },
   async save(input: StaffInput): Promise<Staff> {
     return mutate((db) => {
       const existing = input.id ? db.staff.find((s) => s.id === input.id) : undefined

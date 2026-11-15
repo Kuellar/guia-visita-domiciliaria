@@ -3,7 +3,7 @@
 export const STEPS = [
   { n: '01', title: 'Responde', text: 'Abre Nueva visita. Selecciona el estamento y el motivo de visita.' },
   { n: '02', title: 'Avanza', text: 'Continúa con la pregunta marcada PENDIENTE. Las preguntas no aplicables se saltan solas.' },
-  { n: '03', title: 'Consulta', text: 'El resultado se genera en vivo: actividades, formularios y observaciones sugeridas. Guarda la visita para consultarla después.' },
+  { n: '03', title: 'Consulta', text: 'El resultado se genera en vivo: actividades, formularios y observaciones sugeridas. Guarda la visita para dejarla registrada.' },
 ]
 
 export const FAQ = [

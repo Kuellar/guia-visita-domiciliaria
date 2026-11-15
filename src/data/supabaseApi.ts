@@ -17,7 +17,9 @@ export const supabase: SupabaseClient = URL && KEY ? createClient(URL, KEY) : (n
 function check<T>(res: { data: T; error: { message: string; code?: string } | null }): T {
   if (res.error) {
     const denied = res.error.code === '42501' || /permission|row-level/i.test(res.error.message)
-    throw new Error(denied ? 'No tienes permiso para esta acción.' : res.error.message)
+    if (denied) throw new Error('No tienes permiso para esta acción.')
+    if (res.error.code === '23514') throw new Error('Algún texto es demasiado largo.')
+    throw new Error(res.error.message)
   }
   return res.data
 }
@@ -28,7 +30,6 @@ interface VisitRow {
   updated_at: string
   date: string
   patient_name: string
-  patient_rut: string
   staff_id: string | null
   notes: string
   answers: Visit['answers']
@@ -42,7 +43,6 @@ const toVisit = (r: VisitRow): Visit => ({
   updatedAt: r.updated_at,
   date: r.date,
   patientName: r.patient_name,
-  patientRut: r.patient_rut,
   staffId: r.staff_id ?? '',
   notes: r.notes,
   answers: r.answers,
@@ -124,12 +124,19 @@ export const supabaseBackend: Backend = {
       const row = {
         date: v.date,
         patient_name: v.patientName,
-        patient_rut: v.patientRut,
         staff_id: v.staffId || null,
         notes: v.notes,
         answers: v.answers,
         status: v.status,
         result: v.result,
+      }
+      // Sesión anónima: no puede leer visitas, así que se inserta sin pedir la fila de vuelta.
+      const { data } = await supabase.auth.getSession()
+      if (!v.id && data.session?.user.is_anonymous) {
+        const id = crypto.randomUUID()
+        check(await supabase.from('visits').insert({ id, ...row }))
+        const now = new Date().toISOString()
+        return { ...v, id, createdAt: now, updatedAt: now }
       }
       const res = v.id
         ? await supabase.from('visits').update(row).eq('id', v.id).select().single()
@@ -145,6 +152,10 @@ export const supabaseBackend: Backend = {
     async list() {
       const rows = check(await supabase.from('staff').select('*').order('name'))
       return (rows as StaffRow[]).map(toStaff)
+    },
+    async directory() {
+      const rows = check(await supabase.rpc('staff_directory'))
+      return (rows as Pick<StaffRow, 'id' | 'name' | 'estamento'>[]).map((r) => ({ ...r, active: true }))
     },
     async save(s) {
       const row = {

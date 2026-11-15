@@ -39,7 +39,7 @@ npm run build   # compila a dist/
 
 Dos modos, elegidos automáticamente por `src/data/api.ts`:
 
-- **Supabase** (si existe `.env.local` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`): datos compartidos, con inicio de sesión.
+- **Supabase** (si existe `.env.local` con `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`): datos compartidos. Los funcionarios entran **sin cuenta** y solo guardan visitas; los administradores inician sesión.
 - **Local** (sin esas variables): base de datos de prueba en `localStorage`, con datos de ejemplo y sin inicio de sesión.
 
 ### Configurar Supabase (una vez)
@@ -50,20 +50,27 @@ Dos modos, elegidos automáticamente por `src/data/api.ts`:
    values ('Tu Nombre', 'Enfermero/a', 'tu@email.com', true);
    ```
 3. **Authentication → Users → Add user → Create new user**: el mismo email y una contraseña (marca *Auto confirm*).
-4. **Authentication → Sign In / Providers**: desactiva *Allow new users to sign up*. Así solo entran las cuentas que tú creas.
+4. **Authentication → Sign In / Providers**: desactiva *Allow new users to sign up* (así solo hay cuentas de administrador creadas por ti) y **activa *Allow anonymous sign-ins*** (es la sesión invisible con la que los funcionarios guardan visitas).
+5. **Captcha** (evita que un bot llene la base de datos):
+   - En Cloudflare → *Turnstile* → *Add widget*: agrega el dominio de la app (y `localhost` para pruebas). Obtienes una *site key* y una *secret key*.
+   - Supabase → **Authentication → Attack Protection** (o *Bot and Abuse Protection*) → activa *CAPTCHA protection*, proveedor **Turnstile**, pega la *secret key*.
+   - En `.env.local` agrega `VITE_TURNSTILE_SITE_KEY=<site key>` y vuelve a compilar.
+   - El captcha se pide al guardar la primera visita en un equipo y en el inicio de sesión de administradores.
+6. **Authentication → Rate Limits**: *anonymous sign-ins* limita cuántas sesiones nuevas se crean por IP y hora (30 por defecto está bien).
 
 ### Edge Function `manage-users` (una vez)
 Permite crear usuarios y restablecer contraseñas desde la app, sin entrar a Supabase.
 Supabase → **Edge Functions** → *Deploy a new function* → *Via Editor*, nombre `manage-users`, pega
 `supabase/functions/manage-users/index.ts` y despliega. La clave secreta la pone Supabase automáticamente.
 
-### Dar acceso a otra persona
-App → Administración → Funcionarios: agrégala con su email y una contraseña temporal (botón «Generar»).
-Al entrar por primera vez se le pide crear su propia contraseña. Si la olvida: «Restablecer contraseña».
-
-Para quitar el acceso, desactívala en Funcionarios.
+### Funcionarios y administradores
+- **Funcionarios**: no tienen cuenta. Abren la app, llenan el cuestionario y guardan. Agrégalos en Administración → Funcionarios solo para que aparezcan en el selector «Funcionario/a».
+- **Administradores**: en Funcionarios marca «Administrador», ingresa su email y una contraseña temporal (botón «Generar»). Entran con el enlace «Acceso administrador»; la primera vez se les pide crear su propia contraseña. Si la olvidan: «Restablecer contraseña». Para quitar el acceso, desactívalos.
 
 ### Seguridad
-- Una cuenta solo ve datos si su email figura como funcionario **activo** en la tabla `staff` (funciones `is_staff()` / `is_admin()` en `schema.sql`).
-- Funcionarios: leen todo, crean visitas y editan/borran las propias. Administradores: además editan textos, funcionarios y cualquier visita.
+- No se guarda el RUT. Al ejecutar `schema.sql` se elimina la columna `patient_rut` (exporta un respaldo antes si lo necesitas).
+- Sesión anónima (funcionario): **solo puede crear** visitas; no puede leer ninguna, ni la tabla `staff` (el selector usa `staff_directory()`, que no expone emails). Máximo 20 visitas por hora por sesión (trigger `visits_rate_limit`) y límites de tamaño en los textos.
+- Administrador (email **activo** con `is_admin` en `staff`, función `is_admin()`): lee, edita y borra todas las visitas, textos y funcionarios.
+- Los textos de preguntas y reglas son legibles sin sesión (no son datos personales).
+- Las sesiones anónimas se acumulan en *Authentication → Users*; al final de `schema.sql` hay una consulta opcional para borrar las de más de 30 días.
 - La *publishable key* puede estar en la app; **nunca** pongas la *secret / service_role key* en el código.

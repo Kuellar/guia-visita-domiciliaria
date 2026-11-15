@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { visitsApi } from '../data/api'
+import { useAuth } from '../data/AuthContext'
 import { FAQ, NOTES, STEPS } from '../domain/docs'
 import type { Visit } from '../domain/types'
 
 export function Home() {
+  const { isAdmin } = useAuth()
   const [visits, setVisits] = useState<Visit[]>([])
   useEffect(() => {
-    void visitsApi.list().then(setVisits)
-  }, [])
+    if (isAdmin) void visitsApi.list().then(setVisits)
+  }, [isAdmin])
   const drafts = visits.filter((v) => v.status === 'borrador').length
 
   return (
@@ -20,9 +22,11 @@ export function Home() {
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link to="/visitas/nueva" className="btn bg-white text-brand-700 hover:bg-brand-50">▶ Nueva visita</Link>
-          <Link to="/visitas" className="btn border border-white/40 text-white hover:bg-white/10">
-            Ver visitas ({visits.length}{drafts ? ` · ${drafts} borrador` : ''})
-          </Link>
+          {isAdmin && (
+            <Link to="/visitas" className="btn border border-white/40 text-white hover:bg-white/10">
+              Ver visitas ({visits.length}{drafts ? ` · ${drafts} borrador` : ''})
+            </Link>
+          )}
         </div>
       </section>
 

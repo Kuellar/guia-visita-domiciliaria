@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ResultPanel } from '../components/ResultPanel'
 import { Wizard } from '../components/Wizard'
-import { visitsApi } from '../data/api'
+import { Turnstile, captchaEnabled } from '../components/Turnstile'
+import { backend, visitsApi } from '../data/api'
 import { useAuth } from '../data/AuthContext'
 import { useConfig } from '../data/ConfigContext'
 import { evaluate } from '../domain/engine'
 import type { Answers } from '../domain/types'
 import { attempt } from '../lib/errors'
-import { formatRut, isValidRut } from '../lib/rut'
 
 const today = () => new Date().toLocaleDateString('sv-SE')
 
@@ -16,17 +16,21 @@ export function VisitForm() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { questions, rules, staff } = useConfig()
-  const { me } = useAuth()
+  const { me, isAdmin, session, startAnonymous } = useAuth()
+  // Funcionario sin cuenta: guarda con una sesión anónima y no puede volver a ver la visita.
+  const isPublic = backend.kind === 'supabase' && !isAdmin
   const [loaded, setLoaded] = useState(!id)
   const [date, setDate] = useState(today())
   const [patientName, setPatientName] = useState('')
-  const [patientRut, setPatientRut] = useState('')
   const [staffId, setStaffId] = useState(() => (!id && me && me.id !== 'local' ? me.id : ''))
   const [notes, setNotes] = useState('')
   const [answers, setAnswers] = useState<Answers>(() =>
     !id && me?.estamento && questions[0].options.some((o) => o.value === me.estamento) ? { estamento: me.estamento } : {},
   )
   const [saving, setSaving] = useState(false)
+  const [captcha, setCaptcha] = useState('')
+  const [captchaKey, setCaptchaKey] = useState(0)
+  const needsCaptcha = isPublic && !session && captchaEnabled
 
   useEffect(() => {
     if (!id) return
@@ -34,7 +38,6 @@ export function VisitForm() {
       if (!v) return navigate('/visitas')
       setDate(v.date)
       setPatientName(v.patientName)
-      setPatientRut(v.patientRut)
       setStaffId(v.staffId)
       setNotes(v.notes)
       setAnswers(v.answers)
@@ -43,8 +46,7 @@ export function VisitForm() {
   }, [id, navigate])
 
   const evaluation = useMemo(() => evaluate(answers, questions, rules), [answers, questions, rules])
-  const rutError = patientRut && !isValidRut(patientRut) ? 'RUT no válido' : ''
-  const canSave = patientName.trim() && !rutError && !saving
+  const canSave = patientName.trim() && !saving && (!needsCaptcha || !!captcha)
 
   const pickStaff = (sid: string) => {
     setStaffId(sid)
@@ -56,11 +58,20 @@ export function VisitForm() {
 
   const save = async () => {
     setSaving(true)
+    if (isPublic && !session) {
+      const error = await startAnonymous(captcha)
+      if (error) {
+        alert(error)
+        setCaptcha('')
+        setCaptchaKey((k) => k + 1)
+        setSaving(false)
+        return
+      }
+    }
     const visit = await attempt(() => visitsApi.save({
       id,
       date,
       patientName: patientName.trim(),
-      patientRut: patientRut ? formatRut(patientRut) : '',
       staffId,
       notes,
       answers,
@@ -68,7 +79,9 @@ export function VisitForm() {
       result: evaluation.fired,
     }))
     setSaving(false)
-    if (visit) navigate(`/visitas/${visit.id}`)
+    if (!visit) return
+    if (isPublic) navigate('/visitas/enviada', { state: { patientName: visit.patientName, date: visit.date, result: visit.result } })
+    else navigate(`/visitas/${visit.id}`)
   }
 
   if (!loaded) return <p className="text-slate-500">Cargando…</p>
@@ -80,27 +93,15 @@ export function VisitForm() {
         <div className="flex gap-2">
           <button type="button" className="btn-secondary" onClick={() => setAnswers({})}>Reiniciar respuestas</button>
           <button type="button" className="btn-primary" disabled={!canSave} onClick={save}>
-            {evaluation.complete ? 'Guardar visita' : 'Guardar borrador'}
+            {evaluation.complete || isPublic ? 'Guardar visita' : 'Guardar borrador'}
           </button>
         </div>
       </div>
 
-      <div className="card grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="card grid gap-3 sm:grid-cols-3">
         <div>
           <label className="label" htmlFor="name">Paciente *</label>
-          <input id="name" className="input" value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="Nombre completo" />
-        </div>
-        <div>
-          <label className="label" htmlFor="rut">RUT</label>
-          <input
-            id="rut"
-            className={`input ${rutError ? 'border-red-400' : ''}`}
-            value={patientRut}
-            onChange={(e) => setPatientRut(e.target.value)}
-            onBlur={() => patientRut && isValidRut(patientRut) && setPatientRut(formatRut(patientRut))}
-            placeholder="12.345.678-9"
-          />
-          {rutError && <p className="mt-1 text-xs text-red-600">{rutError}</p>}
+          <input id="name" className="input" value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder="Nombre completo" maxLength={200} />
         </div>
         <div>
           <label className="label" htmlFor="date">Fecha</label>
@@ -115,10 +116,15 @@ export function VisitForm() {
             ))}
           </select>
         </div>
-        <div className="sm:col-span-2 lg:col-span-4">
+        <div className="sm:col-span-3">
           <label className="label" htmlFor="notes">Notas</label>
-          <textarea id="notes" rows={2} className="input" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <textarea id="notes" rows={2} maxLength={5000} className="input" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
+        {needsCaptcha && (
+          <div className="sm:col-span-3">
+            <Turnstile key={captchaKey} onToken={setCaptcha} />
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">

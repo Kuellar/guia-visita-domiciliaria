@@ -14,7 +14,10 @@ export interface Backend {
     remove(id: string): Promise<void>
   }
   staff: {
+    /** Lista completa con emails (solo administradores). */
     list(): Promise<Staff[]>
+    /** Funcionarios activos para el selector de la visita, sin datos de acceso. */
+    directory(): Promise<Staff[]>
     save(input: StaffInput): Promise<Staff>
     remove(id: string): Promise<void>
   }

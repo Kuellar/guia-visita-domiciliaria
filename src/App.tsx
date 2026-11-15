@@ -16,14 +16,61 @@ import { Login, NotAuthorized } from './pages/Login'
 import { VisitDetail } from './pages/VisitDetail'
 import { VisitForm } from './pages/VisitForm'
 import { VisitList } from './pages/VisitList'
+import { VisitSent } from './pages/VisitSent'
+
+/** Sin sesión o con sesión anónima: funcionario sin cuenta (solo llena y guarda visitas). */
+function usePublic() {
+  const { session, isAnonymous } = useAuth()
+  return backend.kind === 'supabase' && (!session || isAnonymous)
+}
 
 function Gate({ children }: { children: ReactNode }) {
-  const { loading, session, me, mustChangePassword } = useAuth()
+  const { loading, me, mustChangePassword } = useAuth()
+  const isPublic = usePublic()
   if (loading) return <p className="p-8 text-center text-slate-500">Cargando…</p>
-  if (backend.kind === 'supabase' && !session) return <Login />
-  if (!me) return <NotAuthorized />
-  if (mustChangePassword) return <HashRouter><ChangePassword forced /></HashRouter>
+  if (!isPublic && !me) return <NotAuthorized />
+  if (!isPublic && mustChangePassword) return <HashRouter><ChangePassword forced /></HashRouter>
   return <ConfigProvider>{children}</ConfigProvider>
+}
+
+function PublicRoutes() {
+  return (
+    <Routes>
+      <Route path="admin-login" element={<Login />} />
+      <Route element={<Layout />}>
+        <Route index element={<Home />} />
+        <Route path="visitas/nueva" element={<VisitForm key="new" />} />
+        <Route path="visitas/enviada" element={<VisitSent />} />
+        <Route path="criterios" element={<Criterios />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  )
+}
+
+function AppRoutes() {
+  if (usePublic()) return <PublicRoutes />
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<Home />} />
+        <Route path="visitas" element={<VisitList />} />
+        <Route path="visitas/nueva" element={<VisitForm key="new" />} />
+        <Route path="visitas/:id" element={<VisitDetail />} />
+        <Route path="visitas/:id/editar" element={<VisitForm />} />
+        <Route path="criterios" element={<Criterios />} />
+        <Route path="cuenta" element={<ChangePassword />} />
+        <Route path="admin" element={<AdminOnly><AdminLayout /></AdminOnly>}>
+          <Route index element={<Navigate to="reglas" replace />} />
+          <Route path="reglas" element={<RulesAdmin />} />
+          <Route path="preguntas" element={<QuestionsAdmin />} />
+          <Route path="funcionarios" element={<StaffAdmin />} />
+          <Route path="datos" element={<DataAdmin />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
+  )
 }
 
 function AdminOnly({ children }: { children: ReactNode }) {
@@ -35,25 +82,7 @@ export default function App() {
     <AuthProvider>
       <Gate>
         <HashRouter>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route index element={<Home />} />
-              <Route path="visitas" element={<VisitList />} />
-              <Route path="visitas/nueva" element={<VisitForm key="new" />} />
-              <Route path="visitas/:id" element={<VisitDetail />} />
-              <Route path="visitas/:id/editar" element={<VisitForm />} />
-              <Route path="criterios" element={<Criterios />} />
-              <Route path="cuenta" element={<ChangePassword />} />
-              <Route path="admin" element={<AdminOnly><AdminLayout /></AdminOnly>}>
-                <Route index element={<Navigate to="reglas" replace />} />
-                <Route path="reglas" element={<RulesAdmin />} />
-                <Route path="preguntas" element={<QuestionsAdmin />} />
-                <Route path="funcionarios" element={<StaffAdmin />} />
-                <Route path="datos" element={<DataAdmin />} />
-              </Route>
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
+          <AppRoutes />
         </HashRouter>
       </Gate>
     </AuthProvider>

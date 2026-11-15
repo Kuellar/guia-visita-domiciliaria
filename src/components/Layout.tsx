@@ -5,7 +5,7 @@ import { useAuth } from '../data/AuthContext'
 const LINKS = [
   { to: '/', label: 'Inicio', end: true },
   { to: '/visitas/nueva', label: 'Nueva visita' },
-  { to: '/visitas', label: 'Visitas', end: true },
+  { to: '/visitas', label: 'Visitas', end: true, admin: true },
   { to: '/criterios', label: 'Criterios' },
   { to: '/admin', label: 'Administración', admin: true },
 ]
@@ -33,12 +33,14 @@ export function Layout() {
               </NavLink>
             ))}
           </nav>
-          {backend.kind === 'supabase' && me && (
+          {backend.kind === 'supabase' && (me ? (
             <div className="ml-auto flex items-center gap-3 text-sm text-slate-500">
               <NavLink to="/cuenta" title="Cambiar contraseña" className="hover:text-brand-600">{me.name}</NavLink>
               <button type="button" className="hover:text-brand-600" onClick={signOut}>Salir</button>
             </div>
-          )}
+          ) : (
+            <NavLink to="/admin-login" className="ml-auto text-sm text-slate-400 hover:text-brand-600">Acceso administrador</NavLink>
+          ))}
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6">

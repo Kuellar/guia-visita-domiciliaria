@@ -3,6 +3,7 @@ import { QUESTIONS } from '../domain/questions'
 import { RULES } from '../domain/rules'
 import type { Question, Rule, Staff } from '../domain/types'
 import { questionsApi, rulesApi, staffApi } from './api'
+import { useAuth } from './AuthContext'
 
 interface Config {
   questions: Question[]
@@ -15,12 +16,17 @@ const ConfigContext = createContext<Config | null>(null)
 
 /** Preguntas, reglas y funcionarios con los cambios del administrador aplicados. */
 export function ConfigProvider({ children }: { children: ReactNode }) {
+  const { isAdmin } = useAuth()
   const [state, setState] = useState({ questions: QUESTIONS, rules: RULES, staff: [] as Staff[] })
 
   const reload = useCallback(async () => {
-    const [questions, rules, staff] = await Promise.all([questionsApi.list(), rulesApi.list(), staffApi.list()])
+    const [questions, rules, staff] = await Promise.all([
+      questionsApi.list(),
+      rulesApi.list(),
+      isAdmin ? staffApi.list() : staffApi.directory(),
+    ])
     setState({ questions, rules, staff })
-  }, [])
+  }, [isAdmin])
 
   useEffect(() => {
     void reload()

@@ -33,12 +33,14 @@ export function StaffAdmin() {
   const [copied, setCopied] = useState(false)
 
   const isSelf = (s: { id?: string }) => remote && s.id === me?.id
-  const emailOk = !remote || !form.email || /^\S+@\S+\.\S+$/.test(form.email)
-  const email = form.email?.trim().toLowerCase() ?? ''
-  // Nuevo funcionario con email: hay que crear su cuenta, por lo que la contraseña es obligatoria.
-  const needsPassword = remote && !!email && !form.id
+  const emailOk = !(remote && form.isAdmin) || !form.email || /^\S+@\S+\.\S+$/.test(form.email)
+  // Solo los administradores tienen cuenta (email + contraseña); el resto es un nombre para elegir en la visita.
+  const hasAccount = remote && !!form.isAdmin
+  const email = hasAccount ? form.email?.trim().toLowerCase() ?? '' : ''
+  // Nuevo administrador: hay que crear su cuenta, por lo que la contraseña es obligatoria.
+  const needsPassword = hasAccount && !form.id
   const passwordOk = !tempPassword || tempPassword.length >= 8
-  const canSave = !!form.name.trim() && emailOk && passwordOk && (!needsPassword || !!tempPassword)
+  const canSave = !!form.name.trim() && emailOk && passwordOk && (!hasAccount || !!email) && (!needsPassword || !!tempPassword)
 
   const resetForm = () => {
     setForm(empty)
@@ -57,7 +59,7 @@ export function StaffAdmin() {
         note = 'Ya tenía una cuenta: su contraseña NO se cambió. Usa «Restablecer contraseña» si la olvidó.'
       }
     }
-    const ok = await attempt(() => staffApi.save({ ...form, name: form.name.trim() }))
+    const ok = await attempt(() => staffApi.save({ ...form, name: form.name.trim(), email: remote ? email : form.email }))
     if (!ok) return
     if (remote && email && tempPassword) {
       setCredentials({ name: form.name.trim(), email, password: note ? '' : tempPassword, note })
@@ -105,8 +107,9 @@ export function StaffAdmin() {
     <div className="space-y-4">
       {remote && (
         <div className="card border-sky-200 bg-sky-50 text-sm text-sky-900">
-          Para dar acceso, agrega a la persona con su <b>email</b> y una <b>contraseña temporal</b>. Al entrar por
-          primera vez se le pedirá crear su propia contraseña. Desactivar a alguien le quita el acceso de inmediato.
+          Los funcionarios no necesitan cuenta: entran a la app sin contraseña y solo pueden guardar visitas. Aquí se
+          agregan para que aparezcan en el selector. Solo los <b>administradores</b> tienen email y contraseña temporal
+          (al entrar por primera vez crean la suya). Desactivar a un administrador le quita el acceso de inmediato.
         </div>
       )}
       {credentials && (
@@ -142,24 +145,24 @@ export function StaffAdmin() {
           </select>
         </div>
         {remote && (
+          <label className="flex items-center gap-1.5 pb-2 text-sm">
+            <input type="checkbox" checked={!!form.isAdmin} disabled={isSelf(form)} onChange={(e) => setForm({ ...form, isAdmin: e.target.checked })} />
+            Administrador
+          </label>
+        )}
+        {hasAccount && (
           <>
             <div className="min-w-56 flex-1">
               <label className="label">Email de acceso</label>
-              <input type="email" className={`input ${emailOk ? '' : 'border-red-400'}`} value={form.email ?? ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Sin acceso a la app" />
+              <input type="email" className={`input ${emailOk ? '' : 'border-red-400'}`} value={form.email ?? ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>
-            {email && (
-              <div className="min-w-56">
-                <label className="label">Contraseña temporal{form.id ? ' (solo si aún no tiene cuenta)' : ''}</label>
-                <div className="flex gap-1">
-                  <input className={`input font-mono ${passwordOk ? '' : 'border-red-400'}`} value={tempPassword} onChange={(e) => setTempPassword(e.target.value)} placeholder="mín. 8 caracteres" />
-                  <button type="button" className="btn-secondary" title="Generar" onClick={() => setTempPassword(generatePassword())}>Generar</button>
-                </div>
+            <div className="min-w-56">
+              <label className="label">Contraseña temporal{form.id ? ' (solo si aún no tiene cuenta)' : ''}</label>
+              <div className="flex gap-1">
+                <input className={`input font-mono ${passwordOk ? '' : 'border-red-400'}`} value={tempPassword} onChange={(e) => setTempPassword(e.target.value)} placeholder="mín. 8 caracteres" />
+                <button type="button" className="btn-secondary" title="Generar" onClick={() => setTempPassword(generatePassword())}>Generar</button>
               </div>
-            )}
-            <label className="flex items-center gap-1.5 pb-2 text-sm">
-              <input type="checkbox" checked={!!form.isAdmin} disabled={isSelf(form)} onChange={(e) => setForm({ ...form, isAdmin: e.target.checked })} />
-              Administrador
-            </label>
+            </div>
           </>
         )}
         <button type="button" className="btn-primary" disabled={!canSave} onClick={save}>
@@ -174,14 +177,14 @@ export function StaffAdmin() {
             <span className="min-w-40 flex-1">
               <span className="font-medium">{s.name}</span>
               {s.isAdmin && remote && <span className="ml-2 rounded bg-brand-50 px-1.5 py-0.5 text-xs text-brand-700">admin</span>}
-              {remote && <span className="block text-xs text-slate-400">{s.email || 'sin acceso'}</span>}
+              {remote && s.isAdmin && <span className="block text-xs text-slate-400">{s.email}</span>}
             </span>
             <span className="w-40">{s.estamento}</span>
             <label className="flex items-center gap-1.5">
               <input type="checkbox" checked={s.active} disabled={isSelf(s)} onChange={() => toggle(s)} /> Activo
             </label>
             <button type="button" className="text-brand-600 hover:underline" onClick={() => { setForm({ ...empty, ...s }); setTempPassword('') }}>Editar</button>
-            {remote && s.email && !isSelf(s) && <button type="button" className="text-brand-600 hover:underline" onClick={() => resetPassword(s)}>Restablecer contraseña</button>}
+            {remote && s.isAdmin && s.email && !isSelf(s) && <button type="button" className="text-brand-600 hover:underline" onClick={() => resetPassword(s)}>Restablecer contraseña</button>}
             {!isSelf(s) && <button type="button" className="text-red-600 hover:underline" onClick={() => remove(s)}>Eliminar</button>}
           </div>
         ))}

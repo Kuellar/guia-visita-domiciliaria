@@ -24,7 +24,7 @@ export function VisitList() {
     const term = q.trim().toLowerCase()
     return visits.filter(
       (v) =>
-        (!term || v.patientName.toLowerCase().includes(term) || v.patientRut.toLowerCase().includes(term)) &&
+        (!term || v.patientName.toLowerCase().includes(term)) &&
         (!staffId || v.staffId === staffId) &&
         (!motivo || v.answers.motivo === motivo) &&
         (!status || v.status === status),
@@ -39,7 +39,7 @@ export function VisitList() {
       </div>
 
       <div className="card grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <input className="input" placeholder="Buscar por nombre o RUT" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input className="input" placeholder="Buscar por nombre" value={q} onChange={(e) => setQ(e.target.value)} />
         <select className="input" value={staffId} onChange={(e) => setStaffId(e.target.value)}>
           <option value="">Todos los funcionarios</option>
           {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -64,7 +64,6 @@ export function VisitList() {
               <span className="w-24 font-mono text-sm text-slate-500">{v.date}</span>
               <span className="min-w-40 flex-1">
                 <span className="font-medium">{v.patientName}</span>
-                {v.patientRut && <span className="ml-2 text-sm text-slate-400">{v.patientRut}</span>}
               </span>
               <span className="text-sm text-slate-600">{motivoLabel(v.answers.motivo)}</span>
               <span className="text-sm text-slate-500">{staffName(v.staffId)}</span>

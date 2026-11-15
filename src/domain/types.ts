@@ -87,7 +87,6 @@ export interface Visit {
   updatedAt: string
   date: string
   patientName: string
-  patientRut: string
   staffId: string
   notes: string
   answers: Answers

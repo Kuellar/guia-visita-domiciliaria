@@ -20,7 +20,6 @@ const VDI = 'Visita domiciliaria integral'
 export interface SeedVisit {
   date: string
   patientName: string
-  patientRut: string
   staffId: string
   notes: string
   answers: Answers
@@ -28,11 +27,11 @@ export interface SeedVisit {
 
 export const SEED_VISITS: SeedVisit[] = [
   {
-    date: '2026-10-05', patientName: 'Rosa Gutiérrez', patientRut: '5.126.337-5', staffId: 's1', notes: 'No asistió a control en septiembre.',
+    date: '2026-10-05', patientName: 'Rosa Gutiérrez', staffId: 's1', notes: 'No asistió a control en septiembre.',
     answers: { estamento: 'Médico/a', motivo: 'Citación o rescate' },
   },
   {
-    date: '2026-10-12', patientName: 'Luis Fernández', patientRut: '9.876.543-3', staffId: 's5', notes: '',
+    date: '2026-10-12', patientName: 'Luis Fernández', staffId: 's5', notes: '',
     answers: {
       estamento: 'TENS', motivo: VDI, edad: '65 años o más', emp: 'No', depSevera: 'No', vacunas: 'Sí', ecicep: 'No',
       visitasPrevias: '1', cronicas: 'Sí', cronicosAlDia: 'Sí', cardio: 'Sí', diabetesAcv: 'No', saludMental: 'No',
@@ -40,7 +39,7 @@ export const SEED_VISITS: SeedVisit[] = [
     },
   },
   {
-    date: '2026-10-18', patientName: 'Marta Herrera', patientRut: '4.321.987-1', staffId: 's2', notes: 'Hija cuidadora presente.',
+    date: '2026-10-18', patientName: 'Marta Herrera', staffId: 's2', notes: 'Hija cuidadora presente.',
     answers: {
       estamento: 'Enfermero/a', motivo: VDI, edad: '65 años o más', emp: 'Sí', depSevera: 'No', evalDep: 'Sí',
       barthel: '20 a 35 - Dependencia severa', vacunas: 'No', ecicep: 'Sí', visitasPrevias: '0', cronicas: 'No',
@@ -48,7 +47,7 @@ export const SEED_VISITS: SeedVisit[] = [
     },
   },
   {
-    date: '2026-10-22', patientName: 'Tomás Vidal', patientRut: '17.654.323-K', staffId: 's4', notes: '',
+    date: '2026-10-22', patientName: 'Tomás Vidal', staffId: 's4', notes: '',
     answers: {
       estamento: 'Psicólogo/a', motivo: VDI, edad: '20 a 64 años', edad20: 'No', emp: 'Sí', depSevera: 'No',
       vacunas: 'Sí', ecicep: 'No', visitasPrevias: '1', cronicas: 'Sí', cronicosAlDia: 'No', cardio: 'No',
@@ -56,7 +55,7 @@ export const SEED_VISITS: SeedVisit[] = [
     },
   },
   {
-    date: '2026-10-28', patientName: 'Sofía Araya', patientRut: '23.456.789-6', staffId: 's3', notes: '',
+    date: '2026-10-28', patientName: 'Sofía Araya', staffId: 's3', notes: '',
     answers: {
       estamento: 'Matrón/a', motivo: VDI, edad: '15 a 19 años', chcc: 'No', clap: 'No', naneas: 'No',
       depSevera: 'No', vacunas: 'Sí', ecicep: 'No', visitasPrevias: '0', cronicas: 'No',
