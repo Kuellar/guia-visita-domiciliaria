@@ -50,7 +50,8 @@ Dos modos, elegidos automáticamente por `src/data/api.ts`:
    values ('Tu Nombre', 'Enfermero/a', 'tu@email.com', true);
    ```
 3. **Authentication → Users → Add user → Create new user**: el mismo email y una contraseña (marca *Auto confirm*).
-4. **Authentication → Sign In / Providers**: desactiva *Allow new users to sign up* (así solo hay cuentas de administrador creadas por ti) y **activa *Allow anonymous sign-ins*** (es la sesión invisible con la que los funcionarios guardan visitas).
+4. **Authentication → Sign In / Providers**: deja **activados** *Allow new users to sign up* y *Allow anonymous sign-ins* (la sesión invisible con la que los funcionarios guardan visitas; Supabase la cuenta como registro, por eso ambos deben estar activos). Mantén *Confirm email* activado.
+   Una cuenta de email creada por cualquiera no obtiene acceso: las reglas RLS solo dan permisos a administradores registrados en `staff` y a sesiones anónimas (que solo pueden crear visitas).
 5. **Captcha** (evita que un bot llene la base de datos):
    - En Cloudflare → *Turnstile* → *Add widget*: agrega el dominio de la app (y `localhost` para pruebas). Obtienes una *site key* y una *secret key*.
    - Supabase → **Authentication → Attack Protection** (o *Bot and Abuse Protection*) → activa *CAPTCHA protection*, proveedor **Turnstile**, pega la *secret key*.
